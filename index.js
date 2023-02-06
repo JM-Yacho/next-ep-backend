@@ -12,7 +12,6 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to Next-Ep-Backend!" });
 });
 
-// watchList endpoint
 // returns "currentyl watching" list for the MyAnimeList with username
 app.get("/watchList/:username",  async (req, res) => {
   let username = req.params.username;
@@ -21,16 +20,14 @@ app.get("/watchList/:username",  async (req, res) => {
   res.json(currentWatchList);
 });
 
-// nextAirDate endpoint
 // returns next air date of anime based on MAL id
-app.get("/nextAirDate/:id", async (req, res) => {
+app.get("/nextAiringEp/:id", async (req, res) => {
   let id = req.params.id;
-  let nextAirDate = await aniListApi.fetchNextAiringEp(id);
+  let nextAiringEp = await aniListApi.fetchNextAiringEp(id);
 
-  res.json(nextAirDate);
+  res.json(nextAiringEp);
 });
 
-// watchListNextEps endpoint
 // returns array with in style [{id, picturUrl, title, nextEp: {airingAt, episode}}...]
 app.get("/watchListNextEps/:username", async (req, res) => {
   let username = req.params.username;
@@ -40,13 +37,12 @@ app.get("/watchListNextEps/:username", async (req, res) => {
     watchListNextEps = await Promise.all(await watchList.map(async anime => {
       return {...anime, nextEp: await aniListApi.fetchNextAiringEp(anime.id)}
     }));
-    watchListNextEps = watchListNextEps.filter(anime => anime.nextEp);
   }
   else {
     watchListNextEps = [];
   }
 
-  res.json(watchListNextEps);
+  res.json(watchListNextEps.filter(anime => anime.nextEp));
 });
 
 app.listen(PORT, () => {
