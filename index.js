@@ -35,9 +35,10 @@ app.get("/watchList/:username",  async (req, res) => {
 // returns next air date of anime based on MAL id
 app.get("/nextAiringEp/:id", async (req, res) => {
   let id = req.params.id;
-  let nextAiringEp = await fetchAirSchedule(id);
+  let currentAirSchedule = await fetchAirSchedule(id)
+  let nextEp = currentAirSchedule.length > 0 ? currentAirSchedule[currentAirSchedule.length - 1] : null
 
-  res.json(nextAiringEp);
+  res.json(nextEp);
 });
 
 // returns the air schedule of anime in current watch list
@@ -52,7 +53,7 @@ app.get("/watchListNextEps/:username", async (req, res) => {
 
       return {
         ...anime,
-        nextEp: currentAirSchedule ? currentAirSchedule[currentAirSchedule.length - 1] : null
+        nextEp: currentAirSchedule.length > 0 ? currentAirSchedule[currentAirSchedule.length - 1] : null
       }
     }));
   }
