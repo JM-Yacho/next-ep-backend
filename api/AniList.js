@@ -1,35 +1,36 @@
-const gql = require('graphql-request');
+import { GraphQLClient } from 'graphql-request';
 
 const aniListUrl = 'https://graphql.anilist.co'
+const client = new GraphQLClient(aniListUrl);
 
 async function fetchFromAniList(query, variables) {
   let results = {};
 
-  await gql.request(aniListUrl, query, variables)
-    .then((res) => {
-      results = res
-    })
-    .catch((error) => {
-      console.error(error.response.status)
-      console.error(error.response.errors)
-    });
+  try {
+    results = await client.request(query, variables)
+    // console.log('Data fetched:', results);
+  } catch (error) {
+    console.error('Error:', error);
+  }
   
   return results;
 }
 
-async function fetchNextAiringEp(id) {
-  const query = gql.gql`
+export async function fetchAirSchedule(id) {
+  const query = `
     query ($idMal: Int) { # Define which variables will be used in the query (id)
       Media (idMal: $idMal, type: ANIME) { # Insert our variables into the query arguments (id) (type: ANIME is hard-coded in the query)
-        nextAiringEpisode {
-          airingAt,
-          episode
-          #,
-          #media {
-          #  title {
-          #    english
-          #  }
-          #}
+        airingSchedule {
+          nodes {
+            airingAt,
+            episode
+            #,
+            #media {
+            #  title {
+            #    english
+            #  }
+            #}
+          }
         }
       }
     }
@@ -42,14 +43,12 @@ async function fetchNextAiringEp(id) {
   let results = await fetchFromAniList(query, variables);
 
   try {
-    let { Media: { nextAiringEpisode } } = results;
-    return nextAiringEpisode;
+    let { Media: { airingSchedule: { nodes } } } = results;
+    return nodes;
   }
   catch {
     return {};
   }
 }
 
-// console.log(await fetchNextAirDate(49220))
-
-module.exports = {fetchNextAiringEp}
+console.log(await fetchAirSchedule(49220))

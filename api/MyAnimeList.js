@@ -1,57 +1,63 @@
-const axios = require('axios');
+import axios from 'axios';
 
-const malUrl = 'https://myanimelist.net'
+const malBaseUrl = 'https://myanimelist.net'
 
 async function fetchFromMAL(url) {
-    let htmlBody = await axios({
-        'method': 'GET',
-        'url': url
-    })
-    .then(response => {
+    try {
+        const response = await axios.get(url);
         return response.data
-    })
-    .catch(error => {
-        console.error(error.response.status)
-        console.error(error.message)
+    } catch (error) {
+        console.error('Error:', error.message, '|', error.config?.url)
         return ''
-    });
-    return htmlBody;
+    }
 }
 
 function searchHtml(html, leftBound, rightBound) {
-    let patternString = `${leftBound}(.*)${rightBound}`
-    let animeListRegex = new RegExp(patternString, 'g')
-    let animeListMatches = html.match(animeListRegex)
-    if(!animeListMatches || animeListMatches.length < 1)
+    let pattern = `${leftBound}(.*)${rightBound}`
+    let reg = new RegExp(pattern, 'g')
+    let matches = html.match(reg)
+    if(!matches || matches.length < 1)
         return ''
 
-    let animeList = animeListMatches[0]
+    let unescapedMatches = matches[0]
         .replace(leftBound, '')
         .replace(rightBound, '')
         .replace(/&quot;/g,'"')
         .replace(/&#039;/g, "'");
-    return animeList
+    return unescapedMatches
 }
 
-async function fetchCurrentWatchList(username) {
-    let url = `${malUrl}/animelist/${username}?status=1`
-    let returnedHtml = await fetchFromMAL(url)
-    if(!returnedHtml)
+async function fetchAndSearchHtml(url, leftBound, rightBound) {
+    let malHtml = await fetchFromMAL(url)
+    
+    if(!malHtml)
         return []
         
+    let foundHtml = searchHtml(malHtml, leftBound, rightBound)
+    if(!foundHtml)
+        return []
+
+    return foundHtml
+}
+
+export async function fetchCurrentWatchList(username) {
     let leftBound = 'data-items="'
     let rightBound = '" data-broadcasts='
-    let watchListHtml = searchHtml(returnedHtml, leftBound, rightBound)
+    let url = `${malBaseUrl}/animelist/${username}?status=1`
+    let watchListHtml = await fetchAndSearchHtml(url, leftBound, rightBound)
     if(!watchListHtml)
         return []
 
     try {
         let watchListJson = JSON.parse(watchListHtml)
+        // console.log(watchListJson[0])
         let filteredWatchList = watchListJson.map(anime => ({
             id: anime.anime_id,
-            pictureUrl: anime.anime_image_path,
+            imageUrl: anime.anime_image_path,
             title: anime.anime_title_eng
+            // airingStatus: anime.anime_airing_status
         }))
+        // console.log(filteredWatchList)
         return filteredWatchList
     }
     catch (err) {
@@ -60,6 +66,4 @@ async function fetchCurrentWatchList(username) {
     }
 }
 
-// console.log(await fetchCurrentWatchList('IschaBoi'))
-
-module.exports = {fetchCurrentWatchList};
+console.log(await fetchCurrentWatchList('IschaBoi'))
