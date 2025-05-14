@@ -66,4 +66,4 @@ export async function fetchCurrentWatchList(username) {
     }
 }
 
-console.log(await fetchCurrentWatchList('IschaBoi'))
+// console.log(await fetchCurrentWatchList('IschaBoi'))
