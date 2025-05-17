@@ -4,33 +4,32 @@ const aniListUrl = 'https://graphql.anilist.co'
 const client = new GraphQLClient(aniListUrl);
 
 async function fetchFromAniList(query, variables) {
-  let results = {};
+  let response = null;
 
   try {
-    results = await client.request(query, variables)
-    // console.log('Data fetched:', results);
+    response = await client.request(query, variables)
+    // console.log('Data fetched:', response);
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error:', error.stack);
   }
   
-  return results;
+  return response;
 }
 
-export async function fetchAirSchedule(id) {
+export async function fetchNextAiringEp(id) {
   const query = `
     query ($idMal: Int) { # Define which variables will be used in the query (id)
       Media (idMal: $idMal, type: ANIME) { # Insert our variables into the query arguments (id) (type: ANIME is hard-coded in the query)
-        airingSchedule {
-          nodes {
-            airingAt,
-            episode
-            #,
-            #media {
-            #  title {
-            #    english
-            #  }
-            #}
-          }
+        title {
+          title_romaji :romaji
+          title_english :english
+        }
+        coverImage {
+          image_url: large 
+        }
+        nextAiringEpisode {
+          airing_at: airingAt,
+          num: episode
         }
       }
     }
@@ -40,15 +39,18 @@ export async function fetchAirSchedule(id) {
     idMal: id
   };
 
-  let results = await fetchFromAniList(query, variables);
+  let response = await fetchFromAniList(query, variables);
+  if(response?.Media?.nextAiringEpisode?.airing_at) {
+    return {
+      id,
+      ...response.Media.title,
+      ...response.Media.nextAiringEpisode,
+      ...response.Media.coverImage
+    }
+  }
 
-  try {
-    let { Media: { airingSchedule: { nodes } } } = results;
-    return nodes;
-  }
-  catch {
-    return {};
-  }
+  return null;
 }
 
-console.log(await fetchAirSchedule(49220))
+// console.log(await fetchNextAiringEp(51818))
+// console.log(await fetchNextAiringEp(49220))

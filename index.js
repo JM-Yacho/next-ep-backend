@@ -1,5 +1,6 @@
-import { fetchCurrentWatchList } from "./api/MyAnimeList.js";
-import { fetchAirSchedule } from "./api/AniList.js";
+import { fetchCurrentlyWatchingList } from "./api/MyAnimeList.js";
+import { fetchNextAiringEp } from "./api/AniList.js";
+import rateLimit from 'express-rate-limit'; 
 import express from "express";
 import cors from 'cors';
 
@@ -11,13 +12,21 @@ const requireApiKey = (req, res, next) => {
   if (key && key === API_KEY) {
     next();
   } else {
-    res.status(401).json({ error: 'Unauthorized: Invalid API key' });
+    res.status(401).json({ error: 'Unauthorized' });
   }
 };
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 const app = express();
 app.use(cors());
 app.use(requireApiKey)
+app.use(limiter)
 
 // Default end point
 app.get("/", (req, res) => {
@@ -27,38 +36,45 @@ app.get("/", (req, res) => {
 // returns "currently watching" list for the MyAnimeList profile with username
 app.get("/watchList/:username",  async (req, res) => {
   let username = req.params.username;
-  let currentWatchList =  await fetchCurrentWatchList(username);
+  let watchList =  await fetchCurrentlyWatchingList(username);
 
-  res.json(currentWatchList);
+  res.json(watchList);
 });
 
 // returns next air date of anime based on MAL id
-app.get("/nextAiringEp/:id", async (req, res) => {
+app.get("/nextEp/:id", async (req, res) => {
   let id = req.params.id;
-  let currentAirSchedule = await fetchAirSchedule(id)
-  let nextEp = currentAirSchedule.length > 0 ? currentAirSchedule[currentAirSchedule.length - 1] : null
+  let nextEp = await fetchNextAiringEp(id)
 
   res.json(nextEp);
 });
 
-// returns the air schedule of anime in current watch list
+// returns array of next episodes for anime in users watch list
+// [{
+//   id
+//   imageUrl
+//   nextEp { 
+//     airingAt
+//     episode
+//   }
+//   title
+// }]
 app.get("/watchListNextEps/:username", async (req, res) => {
   let username = req.params.username;
-  let watchList = await fetchCurrentWatchList(username);
-  let watchListNextEps = [];
+  let watchList = await fetchCurrentlyWatchingList(username);
+  if(!watchList) return res.json(watchList)
+  
+  let watchListNextEps = await Promise.all(
+    watchList
+      .filter(anime => anime.airing_status === 1)
+      .map(async anime => {
+        var nextEp = await fetchNextAiringEp(anime.id)
+        return nextEp
+      })
+  );
 
-  if(watchList) {
-    watchListNextEps = await Promise.all(await watchList.map(async anime => {
-      currentAirSchedule = await fetchAirSchedule(anime.id)
-
-      return {
-        ...anime,
-        nextEp: currentAirSchedule.length > 0 ? currentAirSchedule[currentAirSchedule.length - 1] : null
-      }
-    }));
-  }
-
-  res.json(watchListNextEps.filter(anime => anime.nextEp));
+  let filterEps = watchListNextEps.filter(nextEp => nextEp)
+  res.json(filterEps.length === 0 ? null : filterEps)
 });
 
 app.listen(PORT, () => {

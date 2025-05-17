@@ -7,8 +7,8 @@ async function fetchFromMAL(url) {
         const response = await axios.get(url);
         return response.data
     } catch (error) {
-        console.error('Error:', error.message, '|', error.config?.url)
-        return ''
+        console.error('Error:', error.stack)
+        return null
     }
 }
 
@@ -17,7 +17,7 @@ function searchHtml(html, leftBound, rightBound) {
     let reg = new RegExp(pattern, 'g')
     let matches = html.match(reg)
     if(!matches || matches.length < 1)
-        return ''
+        return null
 
     let unescapedMatches = matches[0]
         .replace(leftBound, '')
@@ -31,39 +31,38 @@ async function fetchAndSearchHtml(url, leftBound, rightBound) {
     let malHtml = await fetchFromMAL(url)
     
     if(!malHtml)
-        return []
+        return null
         
     let foundHtml = searchHtml(malHtml, leftBound, rightBound)
     if(!foundHtml)
-        return []
-
+        return null
+    
     return foundHtml
 }
 
-export async function fetchCurrentWatchList(username) {
+export async function fetchCurrentlyWatchingList(username) {
     let leftBound = 'data-items="'
     let rightBound = '" data-broadcasts='
     let url = `${malBaseUrl}/animelist/${username}?status=1`
     let watchListHtml = await fetchAndSearchHtml(url, leftBound, rightBound)
     if(!watchListHtml)
-        return []
+        return null
 
     try {
-        let watchListJson = JSON.parse(watchListHtml)
-        // console.log(watchListJson[0])
-        let filteredWatchList = watchListJson.map(anime => ({
-            id: anime.anime_id,
-            imageUrl: anime.anime_image_path,
-            title: anime.anime_title_eng
-            // airingStatus: anime.anime_airing_status
-        }))
-        // console.log(filteredWatchList)
-        return filteredWatchList
+        let watchList = JSON.parse(watchListHtml)
+                            .map(anime => ({
+                                id: anime.anime_id,
+                                airing_status: anime.anime_airing_status
+                            }))
+        
+        if(watchList.length == 0) return null
+        
+        return watchList
     }
     catch (err) {
         console.error(err);
-        return []
+        return null
     }
 }
 
-// console.log(await fetchCurrentWatchList('IschaBoi'))
+// console.log(await fetchCurrentlyWatchingList(''))
