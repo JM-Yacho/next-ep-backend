@@ -2,10 +2,14 @@ import { fetchCurrentlyWatchingList } from "./api/MyAnimeList.js";
 import { fetchNextAiringEp } from "./api/AniList.js";
 import rateLimit from 'express-rate-limit'; 
 import express from "express";
+import dotenv from 'dotenv';
 import cors from 'cors';
 
-const PORT = process.env.PORT;
-const API_KEY = process.env.API_KEY;
+dotenv.config();
+const { PORT, API_KEY, FRONTEND_URL } = process.env;
+if (!PORT || !API_KEY || !FRONTEND_URL) {
+  throw new Error('Missing required environment variables!');
+}
 
 const requireApiKey = (req, res, next) => {
   const key = req.header('x-api-key');
@@ -24,7 +28,9 @@ const limiter = rateLimit({
 });
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: FRONTEND_URL,
+}));
 app.use(requireApiKey)
 app.use(limiter)
 
