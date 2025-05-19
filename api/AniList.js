@@ -25,7 +25,7 @@ export async function fetchNextAiringEp(mal_id) {
           title_english :english
         }
         coverImage {
-          image_url: large 
+          image_url: extraLarge 
         }
         nextAiringEpisode {
           airing_at: airingAt,
