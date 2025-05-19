@@ -6,21 +6,38 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 dotenv.config();
-const { PORT, API_KEY, FRONTEND_URL } = process.env;
-if (!PORT || !API_KEY || !FRONTEND_URL) {
+const { ALT_API_KEY, PORT, FRONTEND_API_KEY, FRONTEND_URL } = process.env;
+if (!ALT_API_KEY || !PORT || !FRONTEND_API_KEY || !FRONTEND_URL) {
   throw new Error('Missing required environment variables!');
+}
+
+const corsPolicy = (req, res, next) => {
+  if (req.path === '/') {
+    return next();
+  }
+
+  cors({
+    origin: FRONTEND_URL,
+  })(req, res, next);
 }
 
 const requireApiKey = (req, res, next) => {
   const key = req.header('x-api-key');
-  if (key && key === API_KEY) {
-    next();
-  } else {
-    res.status(401).json({ error: 'Unauthorized' });
+  if (key) {
+    switch (req.path) {
+      case '/':
+        if (key === ALT_API_KEY) return next()
+        break
+      default:
+        if (key === FRONTEND_API_KEY) return next()
+        break
+    }
   }
+
+  return res.status(401).json({ error: 'Unauthorized' });
 };
 
-const limiter = rateLimit({
+const rateLimits = rateLimit({
   windowMs: 60 * 1000,
   max: 60,
   standardHeaders: true,
@@ -28,11 +45,10 @@ const limiter = rateLimit({
 });
 
 const app = express();
-app.use(cors({
-  origin: FRONTEND_URL,
-}));
-app.use(requireApiKey)
-app.use(limiter)
+app.use(rateLimits);
+app.use(corsPolicy);
+// app.set('trust proxy', true);
+app.use(requireApiKey);
 
 // Default end point
 app.get("/", (req, res) => {
@@ -48,22 +64,20 @@ app.get("/watchList/:username",  async (req, res) => {
 });
 
 // returns next air date of anime based on MAL id
-app.get("/nextEp/:id", async (req, res) => {
-  let id = req.params.id;
-  let nextEp = await fetchNextAiringEp(id)
-
+app.get("/nextEp/:mal_id", async (req, res) => {
+  let mal_id = req.params.mal_id;
+  let nextEp = await fetchNextAiringEp(mal_id)
   res.json(nextEp);
 });
 
 // returns array of next episodes for anime in users watch list
 // [{
-//   id
-//   imageUrl
-//   nextEp { 
-//     airingAt
-//     episode
-//   }
-//   title
+// id
+// title_romaji
+// title_english
+// airing_at
+// num
+// image_url
 // }]
 app.get("/watchListNextEps/:username", async (req, res) => {
   let username = req.params.username;
@@ -74,13 +88,13 @@ app.get("/watchListNextEps/:username", async (req, res) => {
     watchList
       .filter(anime => anime.airing_status === 1)
       .map(async anime => {
-        var nextEp = await fetchNextAiringEp(anime.id)
+        var nextEp = await fetchNextAiringEp(anime.mal_id)
         return nextEp
       })
   );
 
-  let filterEps = watchListNextEps.filter(nextEp => nextEp)
-  res.json(filterEps.length === 0 ? null : filterEps)
+  let filteredEps = watchListNextEps.filter(nextEp => nextEp)
+  res.json(filteredEps.length === 0 ? null : filteredEps)
 });
 
 app.listen(PORT, () => {

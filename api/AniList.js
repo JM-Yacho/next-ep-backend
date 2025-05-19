@@ -16,10 +16,10 @@ async function fetchFromAniList(query, variables) {
   return response;
 }
 
-export async function fetchNextAiringEp(id) {
+export async function fetchNextAiringEp(mal_id) {
   const query = `
-    query ($idMal: Int) { # Define which variables will be used in the query (id)
-      Media (idMal: $idMal, type: ANIME) { # Insert our variables into the query arguments (id) (type: ANIME is hard-coded in the query)
+    query ($mal_id: Int) { # Define which variables will be used in the query (id)
+      Media (idMal: $mal_id, type: ANIME) { # Insert our variables into the query arguments (id) (type: ANIME is hard-coded in the query)
         title {
           title_romaji :romaji
           title_english :english
@@ -36,13 +36,13 @@ export async function fetchNextAiringEp(id) {
   `;
 
   let variables = {
-    idMal: id
+    mal_id: mal_id
   };
 
   let response = await fetchFromAniList(query, variables);
   if(response?.Media?.nextAiringEpisode?.airing_at) {
     return {
-      id,
+      mal_id,
       ...response.Media.title,
       ...response.Media.nextAiringEpisode,
       ...response.Media.coverImage

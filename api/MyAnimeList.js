@@ -51,11 +51,9 @@ export async function fetchCurrentlyWatchingList(username) {
     try {
         let watchList = JSON.parse(watchListHtml)
                             .map(anime => ({
-                                id: anime.anime_id,
+                                mal_id: anime.anime_id,
                                 airing_status: anime.anime_airing_status
                             }))
-        
-        if(watchList.length == 0) return null
         
         return watchList
     }
