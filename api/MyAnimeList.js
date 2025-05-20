@@ -1,14 +1,17 @@
 import axios from 'axios';
 
 const malBaseUrl = 'https://myanimelist.net'
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function fetchFromMAL(url) {
     try {
         const response = await axios.get(url);
         return response.data
     } catch (error) {
-        console.error('Error:', error.stack)
-        return null
+        console.error(`[${new Date().toISOString()}] Error fetching from MAL:`, error.message);
+        if (NODE_ENV !== 'production') {
+            console.error(error.stack);
+        }
     }
 }
 
@@ -35,7 +38,7 @@ async function fetchAndSearchHtml(url, leftBound, rightBound) {
         
     let foundHtml = searchHtml(malHtml, leftBound, rightBound)
     if(!foundHtml)
-        return null
+        return []
     
     return foundHtml
 }
@@ -45,8 +48,8 @@ export async function fetchCurrentlyWatchingList(username) {
     let rightBound = '" data-broadcasts='
     let url = `${malBaseUrl}/animelist/${username}?status=1`
     let watchListHtml = await fetchAndSearchHtml(url, leftBound, rightBound)
-    if(!watchListHtml)
-        return null
+    if(!watchListHtml || watchListHtml.length < 1)
+        return watchListHtml
 
     try {
         let watchList = JSON.parse(watchListHtml)

@@ -2,6 +2,7 @@ import { GraphQLClient } from 'graphql-request';
 
 const aniListUrl = 'https://graphql.anilist.co'
 const client = new GraphQLClient(aniListUrl);
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function fetchFromAniList(query, variables) {
   let response = null;
@@ -10,7 +11,10 @@ async function fetchFromAniList(query, variables) {
     response = await client.request(query, variables)
     // console.log('Data fetched:', response);
   } catch (error) {
-    console.error('Error:', error.stack);
+    console.error(`[${new Date().toISOString()}] Error fetching from AniList:`, error.message);
+    if (NODE_ENV !== 'production') {
+        console.error(error.stack);
+    }
   }
   
   return response;

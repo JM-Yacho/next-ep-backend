@@ -45,7 +45,7 @@ const rateLimits = rateLimit({
 });
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 app.use(rateLimits);
 app.use(corsPolicy);
 app.use(requireApiKey);
@@ -82,7 +82,7 @@ app.get("/nextEp/:mal_id", async (req, res) => {
 app.get("/watchListNextEps/:username", async (req, res) => {
   let username = req.params.username;
   let watchList = await fetchCurrentlyWatchingList(username);
-  if(!watchList) return res.json(watchList)
+  if(!watchList || watchList.length === 0) return res.json(watchList)
   
   let watchListNextEps = await Promise.all(
     watchList
