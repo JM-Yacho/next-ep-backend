@@ -94,7 +94,7 @@ app.get("/watchListNextEps/:username", async (req, res) => {
   );
 
   let filteredEps = watchListNextEps.filter(nextEp => nextEp)
-  res.json(filteredEps.length === 0 ? null : filteredEps)
+  res.json(filteredEps)
 });
 
 app.listen(PORT, () => {
