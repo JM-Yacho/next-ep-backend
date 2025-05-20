@@ -45,9 +45,9 @@ const rateLimits = rateLimit({
 });
 
 const app = express();
+app.set('trust proxy', true);
 app.use(rateLimits);
 app.use(corsPolicy);
-// app.set('trust proxy', true);
 app.use(requireApiKey);
 
 // Default end point
